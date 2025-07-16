@@ -57,8 +57,8 @@ Here using `STAR` , note that `--genomeDir` requires a pre-existing genome index
 ```bash
 STAR \
   --genomeDir /path/to/STAR/index \	
-  --readFilesIn extracted_fastq/cellA_R1_umiextract.fastq.gz \
-                 extracted_fastq/cellA_R2_umiextract.fastq.gz \
+  --readFilesIn cellA_R1_umiextract.fastq.gz \
+                 cellA_R2_umiextract.fastq.gz \
   --readFilesCommand zcat \
   --outSAMtype BAM Unsorted
 ```
@@ -90,7 +90,7 @@ umite.D.tsv   # counts for UMI-duplicates (for QC)
 log.txt           # summary of processing & statistics (optional, enabled with --logfile)
 ```
 
-The output counts matrices contain samples (cells) in rows, with columns denoted by genes parsed from the GTF. These begin with read categories (e.g. `_unmapped`, `_multimapping`) that report the fate of every read from the `umiextract` FASTQ according to the following schema:
+The output counts matrices contain samples (cells) in rows, with columns denoted by genes parsed from the GTF. These begin with read categories (e.g. `_unmapped`, `_multimapping`, `_ambiguous`) that report the fate of every read from the `umiextract` FASTQ according to the following schema:
 
 ![umite_read_categories](images/umite_readcat_scheme.png)
 
@@ -100,7 +100,7 @@ The output counts matrices contain samples (cells) in rows, with columns denoted
 
 Run `umiextract -h` or `umicount -h` for the full list of options.
 
-### `umiextract`
+### umiextract
 
 | Flag | Description | Default |
 |------|-------------|---------|
@@ -120,7 +120,7 @@ Run `umiextract -h` or `umicount -h` for the full list of options.
 | `--min_seqlen` | Minimum remaining sequence after trimming UMI | `-1` |
 | `--only_umi` | Drop reads that lack a detectable UMI | off |
 
-### `umicount`
+### umicount
 
 | Flag | Description | Default |
 |------|-------------|---------|
@@ -128,7 +128,7 @@ Run `umiextract -h` or `umicount -h` for the full list of options.
 | `-d / --output_dir` | Output directory | `.` |
 | `-c / --cores` | Parallel workers (one BAM per core) | all cores |
 | `-l / --logfile` | Path to log file | `sys.stdout` |
-| `-g / --gtf` | Ensembl‑style GTF annotation | *required* |
+| `-g / --gtf` | Ensembl‑style GTF annotation | *required* (see below) |
 | `--tmp_dir` | Directory to save temporary files | `--output_dir` |
 | `--no_dedup` | Skip deduplication and report all UMI-reads | off |
 | `--mm_count_primary` | Count primary alignment for multimapping reads | off |
@@ -139,7 +139,7 @@ Run `umiextract -h` or `umicount -h` for the full list of options.
 | `--hamming_threshold` | Hamming threshold for merging UMIs | `1` |
 | `--count_ratio_threshold` | Only merge UMIs if one has 2*threhsold as many counts | `2` |
 
-Of note, as GTF parsing can take several minutes, umicount implements the option to parse fro mthe GTF file once and dump the contents to a `pickle` file. Using `--gtf` with `--GTF_dump` will enable dumping parsed GTF data to a `pickle` file which can be used as input for `umicount` with `--GTF_skip_parse` instead of `--gtf`. This functionality is useful when running multiple repeat quantifications, however generally `--gtf` is the better option. Here a minimal example of this functionality:
+Of note, as GTF parsing can take several minutes, umicount implements the option to parse from the GTF file once and dump the contents to a `pickle` file. Using `--gtf` with `--GTF_dump` will enable dumping parsed GTF data to a `pickle` file which can be used as input for `umicount` with `--GTF_skip_parse` instead of `--gtf`. This functionality is useful when running multiple repeat quantifications, however generally `--gtf` is the better option. Here a minimal example of this functionality:
 
 ```bash
 umicount \
