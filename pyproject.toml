@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "umite"
+version = "0.1.0"
+description = "UMI counting tool for SmartSeq3 libraries"
+authors = [{name="Leo Förster", email="leoforster@gmail.com"}]
+keywords = ["biology", "bioinformatics", "single cell", "transcriptomics", "smartseq3"]
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "HTSeq",
+    "regex",
+    "RapidFuzz"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=5",
+]
+
+[project.scripts]
+umicount = "umite.cli:umicount"
+umiextract = "umite.cli:umiextract"
+
+[tool.setuptools.packages.find]
+where = ["."]
