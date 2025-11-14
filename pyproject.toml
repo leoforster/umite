@@ -1,14 +1,22 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "umite"
 version = "0.1.0"
 description = "UMI counting tool for SmartSeq3 libraries"
-authors = [{name="Leo Förster", email="leoforster@gmail.com"}]
-keywords = ["biology", "bioinformatics", "single cell", "transcriptomics", "smartseq3"]
+authors = [
+    {name="Leo Förster", email="leoforster@gmail.com"},
+    {name="Enrico Frigoli", email="enrico.frigoli@dkfz-heidelberg.de"},
+    {name="Xiaoyu Sun", email="binggans@hotmail.com"},
+    {name="Angela Goncalves", email="a.goncalves@dkfz-heidelberg.de"},
+    {name="Ana Martin-Villalba", email="a.martin-villalba@dkfz-heidelberg.de"},
+]
+maintainers = ["Leo Förster <leoforster@gmail.com>"]
 readme = "README.md"
+repository = "https://github.com/leoforster/umite"
+keywords = ["biology", "bioinformatics", "single cell", "transcriptomics", "smartseq3"]
+license = "GPL-3.0-or-later"
+classifiers = [
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
 requires-python = ">=3.7"
 dependencies = [
     "HTSeq",
@@ -20,6 +28,10 @@ dependencies = [
 dev = [
     "pytest>=5",
 ]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [project.scripts]
 umicount = "umite.cli:umicount"
