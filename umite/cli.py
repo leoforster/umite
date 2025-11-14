@@ -78,11 +78,11 @@ def umiextract():
     parser.add_argument("--trailing_hamming_threshold", action="store", type=int, default=2, 
                         help="Maximum Hamming distance in trailing sequence")
 
-    r = parser.parse_args()
-
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
+
+    r = parser.parse_args()
 
     # set up logging
     logger = configure_logging(r.logfile)
@@ -181,12 +181,12 @@ def umicount():
     parser.add_argument("--count_ratio_threshold", action="store", type=int, default=2,
                         help=("Threshold where UMIs are only merged if one has "
                               "at least (threshold*counts)-1 as many counts as the other, usually 2"))
-    
-    r = parser.parse_args()
 
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
+
+    r = parser.parse_args()
 
     # set up logging
     logger = configure_logging(r.logfile)
