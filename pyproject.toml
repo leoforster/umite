@@ -7,11 +7,10 @@ authors = [
     {name="Enrico Frigoli", email="enrico.frigoli@dkfz-heidelberg.de"},
     {name="Xiaoyu Sun", email="binggans@hotmail.com"},
     {name="Angela Goncalves", email="a.goncalves@dkfz-heidelberg.de"},
-    {name="Ana Martin-Villalba", email="a.martin-villalba@dkfz-heidelberg.de"},
+    {name="Ana Martin-Villalba", email="a.martin-villalba@dkfz-heidelberg.de"}
 ]
-maintainers = ["Leo Förster <leoforster@gmail.com>"]
+maintainers = [{name="Leo Förster", email="leoforster@gmail.com"}]
 readme = "README.md"
-repository = "https://github.com/leoforster/umite"
 keywords = ["biology", "bioinformatics", "single cell", "transcriptomics", "smartseq3"]
 license = "GPL-3.0-or-later"
 classifiers = [
