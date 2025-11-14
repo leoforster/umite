@@ -66,6 +66,7 @@ def process_entry(entry, pattern, umi_len, only_umi,
                     and (cins + cdel) <= fuzzy_umi_params['anchor_max_indel'] \
                     and Hamming.distance(trailing_seq, 
                                          trailing_hit) <= fuzzy_umi_params['trailing_dist_thresh']:
+                    fuzzy_hit = True
                     umi = match.group(2)
                 else:
                     umi = None
@@ -74,10 +75,12 @@ def process_entry(entry, pattern, umi_len, only_umi,
         else:
             umi = None
     else:
+        fuzzy_hit = False
         umi = match.group(0)[len(anchor_seq):len(anchor_seq) + umi_len]
 
     if umi:
-        entry_processed = slice_SequenceWithQualities(entry, match.span()[1])
+        trim_until = match.span()[1] + (len(trailing_seq) if fuzzy_hit else 0)
+        entry_processed = slice_SequenceWithQualities(entry, trim_until)
         entry_processed.name += '_' + umi
         return entry_processed, umi
     else:
