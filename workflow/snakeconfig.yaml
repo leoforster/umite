@@ -1,0 +1,70 @@
+########################
+###  umite WORKFLOW  ###
+########################
+
+###### inputs: required ######
+
+runID: "umite_basic" # give this workflow run a name
+
+# samples: path to file containing sample names.
+# this file should contain one sample name per line,
+# where the sample name is such that name+R1_suffix
+# (see below) correspond to R1 fastq file names, and
+# similarly for R2. 
+samples_file: ""
+
+# input data: path to fastq directory
+fastq_dir: ""
+
+# file endings for fastqs
+R1_suffix: "_R1.fastq.gz"
+R2_suffix: "_R2.fastq.gz"
+
+# output results: path to directory
+output_dir: ""
+
+# log files: path to directory. one log file is created per sample
+log_dir: ""
+
+# cores to use in parallelizing umite, star
+threads: 4
+
+# location of reference genome and annotation
+reference:
+  genome: ""
+  annotation: ""
+
+### program args: optional ###
+
+# for details on individual program args: see methods  
+# supplement or github: https://github.com/leoforster/umite
+umiextract:
+  anchor_seq: "ATTGCGCAATG"
+  trailing_seq: "GGG"
+  umilen: 8
+  search_region: -1
+  min_seqlen: 30
+  only_umi: False
+  fuzzy_umi: True
+  anchor_mismatches: 2
+  anchor_indels: 1
+  trailing_hamming: 1
+
+umicount:
+  min_read_mapQ: 0
+  dedupe_umis: True
+  combine_unspliced: False
+  count_multimappers: True
+  multiple_primary_action: "warn"
+  correct_umis: True
+  hamming_threshold: 1
+  count_ratio_threshold: 2
+
+# extra args specified here are run verbatim with the 
+# constituent command. enables other custom inputs to eg. star 
+extra_args:
+  umiextract: ""
+  umicount: ""
+  star_index: ""
+  star_align: "--clip3pAdapterSeq CTGTCTCTTATACACATCT CTGTCTCTTATACACATCT --clip3pAdapterMMp 0.1 0.1"
+  samtools_sort: ""

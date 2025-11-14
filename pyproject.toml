@@ -24,9 +24,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=5",
-]
+tests = ["pytest>=5"]
+workflow = ["snakemake>=8"]
 
 [build-system]
 requires = ["setuptools>=61.0"]

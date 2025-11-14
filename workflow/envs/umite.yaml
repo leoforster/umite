@@ -1,0 +1,13 @@
+name: umite-workflow
+
+channels:
+  - conda-forge
+  - bioconda
+
+dependencies:
+  - python=3.7
+  - bioconda::star=2.7.11b
+  - samtools
+  - pip
+  - pip:
+    - umite
