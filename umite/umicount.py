@@ -1,7 +1,6 @@
 import sys
 import os
 import pickle
-import tempfile
 import random
 from multiprocessing import Pool
 from collections import defaultdict
@@ -564,3 +563,7 @@ def process_bam_parallel(bamfiles, outdir, gtf_data, num_workers=4,
     # output counts table to file, cells in rows
     for c in cols_to_use:
         write_counts_for_col(results_paths, c, outdir, list(gtf_data[2].keys()), sep='\t') # gtf_data[2] is gattributes
+
+    # remove temp files
+    for f in results_paths:
+        os.remove(f)
