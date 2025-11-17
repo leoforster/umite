@@ -1,4 +1,5 @@
 from os.path import exists, basename, dirname, join
+from os import rename
 import pandas as pd
 
 ######################### umite SNAKEMAKE WORKFLOW #########################
@@ -23,7 +24,8 @@ for i in [config['samples_file'], config['fastq_dir'], config['output_dir'], con
 runID = config['runID']
 cores = config['threads']
 
-basecols = [] # which output tables are generated
+# determine output tables to generate
+basecols = []
 if config['umicount']['combine_unspliced']:
     basecols += ['U', 'R']
 else:
@@ -44,7 +46,7 @@ print(f"running umite snakemake workflow {runID} on {len(samples)} samples, with
 # define outputs
 rule all:
     input:
-        expand(join(config['output_dir'], f"{runID}_umite"), ext=file_ext)
+        expand(join(config['output_dir'], f"{runID}_umite{{ext}}"), ext=file_ext)
 
 rule prepare_star_indices:
     input:
@@ -68,14 +70,19 @@ rule prepare_star_indices:
             {params.extra}
         '''
 
+def format_umiextract_output_name(suffix):
+    readpart, filepart = suffix.split('.', 1) # e.g. ['_R1','fastq.gz']
+    return f"{readpart}_umiextract.{filepart}" # _R1_umiextract.fastq.gz
+
 rule umiextract:
     input:
         R1s = expand(join(config['fastq_dir'], f"{{sample}}{config['R1_suffix']}"), sample=samples),
         R2s = expand(join(config['fastq_dir'], f"{{sample}}{config['R2_suffix']}"), sample=samples)
     output:
-        temp(join(config['output_dir'], f"{{sample}}{config['R1_suffix'].split('.')[0]}_umiextract{config['R1_suffix'].split('1')[1]}")),
-        temp(join(config['output_dir'], f"{{sample}}{config['R2_suffix'].split('.')[0]}_umiextract{config['R2_suffix'].split('2')[1]}"))
-    log: join(config['log_dir'], f"{runID}_{{sample}}.umiextract.log")
+        # these have form sample_R1_umiextract.fastq.gz
+        temp(expand(join(config['output_dir'], f"{{sample}}{format_umiextract_output_name(config['R1_suffix'])}"), sample=samples)),
+        temp(expand(join(config['output_dir'], f"{{sample}}{format_umiextract_output_name(config['R2_suffix'])}"), sample=samples))
+    log: join(config['log_dir'], f"{runID}.umiextract.log")
     conda: 'umite_conda.yaml'
     threads: cores
     params:
@@ -110,7 +117,8 @@ rule umiextract:
 
 rule star_alignment:
     input:
-        fq_with_umi = rules.umiextract.output,
+        R1_extract = join(config['output_dir'], f"{{sample}}{format_umiextract_output_name(config['R1_suffix'])}"),
+        R2_extract = join(config['output_dir'], f"{{sample}}{format_umiextract_output_name(config['R2_suffix'])}"),
         indices = rules.prepare_star_indices.output
     output:
         temp(join(config['output_dir'], '{sample}_Aligned.out.bam'))
@@ -126,7 +134,7 @@ rule star_alignment:
             --runThreadN {threads} \
             --genomeDir {input.indices} \
             --genomeLoad LoadAndRemove \
-            --readFilesIn {input.fq_with_umi} \
+            --readFilesIn {input.R1_extract} {input.R2_extract} \
             --readFilesCommand zcat \
             --outFileNamePrefix {params.outprefix} \
             --outSAMtype BAM Unsorted \
@@ -159,7 +167,7 @@ rule umicount:
         bams = expand(join(config['output_dir'], '{sample}.namesort.bam'), sample=samples),
         gtf_dump = ancient(rules.parse_dump_GTF.output)
     output:
-        expand(join(config['output_dir'], f"{runID}_umite"), ext=file_ext)
+        expand(join(config['output_dir'], f"{runID}_umite{{ext}}"), ext=file_ext)
     log: join(config['output_dir'], f"{runID}_umicount.log")
     conda: 'umite_conda.yaml'
     threads: cores
@@ -174,8 +182,8 @@ rule umicount:
         hamming_threshold=(f"--hamming_threshold {config['umicount']['hamming_threshold']}" if config['umicount']['correct_umis'] else ''),
         count_ratio_threshold=(f"--count_ratio_threshold {config['umicount']['count_ratio_threshold']}" if config['umicount']['correct_umis'] else ''),
         extra=config['extra_args']['umicount']
-    shell:
-        '''
+    run:
+        shell('''
         umicount \
             --bams {input.bams} \
             -d {params.outdir} \
@@ -186,10 +194,8 @@ rule umicount:
             {params.dedupe_umis} {params.combine_unspliced} {params.count_multimappers} \
             {params.correct_umis} {params.hamming_threshold} {params.count_ratio_threshold} \
             {params.extra}
+        ''')
 
-        mv umite.D.tsv {runID}_umite.D.tsv
-        mv umite.RE.tsv {runID}_umite.RE.tsv
-        mv umite.RI.tsv {runID}_umite.RI.tsv
-        mv umite.UE.tsv {runID}_umite.UE.tsv
-        mv umite.UI.tsv {runID}_umite.UI.tsv
-        '''
+        for ext in file_ext:
+            os.rename(join(params.outdir, f"umite{ext}"),
+                      join(params.outdir, f"{runID}_umite{ext}"))
