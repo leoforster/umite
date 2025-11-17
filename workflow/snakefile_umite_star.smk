@@ -17,23 +17,34 @@ for i in [config['samples_file'], config['fastq_dir'], config['output_dir'], con
           config['reference']['genome'], config['reference']['annotation']]:
 
     if not exists(i):
-        raise FileNotFoundError(f'invalid path: {i}')
+        raise FileNotFoundError(f"invalid path: {i}")
 
 # populate run data
 runID = config['runID']
 cores = config['threads']
 
-with open(config['samples_file'], 'r') as f:
-    samples = f.read().splitlines() # no newlines
+basecols = [] # which output tables are generated
+if config['umicount']['combine_unspliced']:
+    basecols += ['U', 'R']
+else:
+    basecols += ['UE', 'UI', 'RE', 'RI']
+if config['umicount']['dedupe_umis']:
+    basecols += ['D']
 
-print(f'running umite snakemake workflow {runID} on {len(samples)} samples, with fastqs in {config['fastq_dir']}')
+file_ext = [f".{i}.tsv" for i in basecols] # .D.tsv, .UE.tsv, ...
+
+# read samples list from file
+with open(config['samples_file'], 'r') as f:
+    samples = f.read().splitlines()
+
+print(f"running umite snakemake workflow {runID} on {len(samples)} samples, with fastqs in {config['fastq_dir']}")
 
 ############# START WORKFLOW 
 
 # define outputs
 rule all:
     input:
-        multiext(join(config['output_dir'], f'{runID}_umicounts'), '.D.tsv', '.RE.tsv', '.RI.tsv', '.UE.tsv', '.UI.tsv')
+        expand(join(config['output_dir'], f"{runID}_umite"), ext=file_ext)
 
 rule prepare_star_indices:
     input:
@@ -41,8 +52,8 @@ rule prepare_star_indices:
         gene_annotation = ancient(config['reference']['annotation'])
     output:
         directory(join(dirname(config['reference']['genome']), 'star_indices'))
-    log: join(config['log_dir'], f'{runID}.star_index.log')
-    conda: 'envs/umite.yaml'
+    log: join(config['log_dir'], f"{runID}.star_index.log")
+    conda: 'umite_conda.yaml'
     threads: cores
     params:
         extra=config['extra_args']['star_index']
@@ -59,31 +70,32 @@ rule prepare_star_indices:
 
 rule umiextract:
     input:
-        multiext(join(config['fastqdir'], '{sample}'), config['R1_suffix'], config['R2_suffix'])
+        R1s = expand(join(config['fastq_dir'], f"{{sample}}{config['R1_suffix']}"), sample=samples),
+        R2s = expand(join(config['fastq_dir'], f"{{sample}}{config['R2_suffix']}"), sample=samples)
     output:
-        temp(join(config['output_dir'], '{sample}_R1_umiextract.fastq.gz')),
-        temp(join(config['output_dir'], '{sample}_R2_umiextract.fastq.gz'))
-    log: join(config['log_dir'], f'{runID}_{{sample}}.umiextract.log')
-    conda: 'envs/umite.yaml'
+        temp(join(config['output_dir'], f"{{sample}}{config['R1_suffix'].split('.')[0]}_umiextract{config['R1_suffix'].split('1')[1]}")),
+        temp(join(config['output_dir'], f"{{sample}}{config['R2_suffix'].split('.')[0]}_umiextract{config['R2_suffix'].split('2')[1]}"))
+    log: join(config['log_dir'], f"{runID}_{{sample}}.umiextract.log")
+    conda: 'umite_conda.yaml'
     threads: cores
     params:
         outdir=config['output_dir'],
         anchor_seq=config['umiextract']['anchor_seq'],
         trailing_seq=config['umiextract']['trailing_seq'],
-        umilen=config['umiextract']['umi_len'],
+        umilen=config['umiextract']['umilen'],
         search_region=config['umiextract']['search_region'],
         min_seqlen=config['umiextract']['min_seqlen'],
         only_umi=('--only_umi' if config['umiextract']['only_umi'] else ''),
         fuzzy_umi=('--fuzzy_umi' if config['umiextract']['fuzzy_umi'] else ''),
-        anchor_mismatches=(f'--anchor_mismatches {config['umiextract']['anchor_mismatches']}' if config['umiextract']['fuzzy_umi'] else ''),
-        anchor_indels=(f'--anchor_indels {config['umiextract']['anchor_indels']}' if config['umiextract']['fuzzy_umi'] else ''),
-        trailing_hamming=(f'--trailing_hamming {config['umiextract']['trailing_hamming']}' if config['umiextract']['fuzzy_umi'] else ''),
+        anchor_mismatches=(f"--anchor_mismatches {config['umiextract']['anchor_mismatches']}" if config['umiextract']['fuzzy_umi'] else ''),
+        anchor_indels=(f"--anchor_indels {config['umiextract']['anchor_indels']}" if config['umiextract']['fuzzy_umi'] else ''),
+        trailing_hamming=(f"--trailing_hamming {config['umiextract']['trailing_hamming']}" if config['umiextract']['fuzzy_umi'] else ''),
         extra=config['extra_args']['umiextract']
     shell:
         '''
         umiextract \
-            -1 {input[0]} \
-            -2 {input[1]} \
+            -1 {input.R1s} \
+            -2 {input.R2s} \
             -d {params.outdir} \
             -c {threads} \
             --umilen {params.umilen} \
@@ -102,8 +114,8 @@ rule star_alignment:
         indices = rules.prepare_star_indices.output
     output:
         temp(join(config['output_dir'], '{sample}_Aligned.out.bam'))
-    log: join(config['log_dir'], f'{runID}_{{sample}}.star_align.log')
-    conda: 'envs/umite.yaml'
+    log: join(config['log_dir'], f"{runID}_{{sample}}.star_align.log")
+    conda: 'umite_conda.yaml'
     threads: cores
     params:
         outprefix=join(config['output_dir'], '{sample}_'),
@@ -126,8 +138,8 @@ rule sort_aligned_reads:
         rules.star_alignment.output
     output:
         join(config['output_dir'], '{sample}.namesort.bam')
-    log: join(config['log_dir'], f'{runID}_{{sample}}.sort_reads.log')
-    conda: 'envs/umite.yaml'
+    log: join(config['log_dir'], f"{runID}_{{sample}}.sort_reads.log")
+    conda: 'umite_conda.yaml'
     threads: cores
     shell:
         'samtools sort -@ {threads} -n {input} > {output}'
@@ -137,8 +149,8 @@ rule parse_dump_GTF:
         ancient(config['reference']['annotation'])
     output:
         join(dirname(config['reference']['annotation']), 'umicount_GTF_dump.pkl')
-    log: join(config['log_dir'], f'{runID}_{{sample}}.gtf_dump.log')
-    conda: 'envs/umite.yaml'
+    log: join(config['log_dir'], f"{runID.}gtf_dump.log")
+    conda: 'umite_conda.yaml'
     shell:
         'umicount -g {input} --GTF_dump {output}'
 
@@ -147,9 +159,9 @@ rule umicount:
         bams = expand(join(config['output_dir'], '{sample}.namesort.bam'), sample=samples),
         gtf_dump = ancient(rules.parse_dump_GTF.output)
     output:
-        multiext(join(config['output_dir'], f'{runID}_umicounts'), '.D.tsv', '.RE.tsv', '.RI.tsv', '.UE.tsv', '.UI.tsv')
-    log: join(config['output_dir'], f'{runID}_umicount.log')
-    conda: 'envs/umite.yaml'
+        expand(join(config['output_dir'], f"{runID}_umite"), ext=file_ext)
+    log: join(config['output_dir'], f"{runID}_umicount.log")
+    conda: 'umite_conda.yaml'
     threads: cores
     params:
         outdir=config['output_dir'],
@@ -159,8 +171,8 @@ rule umicount:
         count_multimappers=('--mm_count_primary' if config['umicount']['count_multimappers'] else ''),
         multiple_primary_action=config['umicount']['multiple_primary_action'],
         correct_umis=('--UMI_correct' if config['umicount']['correct_umis'] else ''),
-        hamming_threshold=(f'--hamming_threshold {config['umicount']['hamming_threshold']}' if config['umicount']['correct_umis'] else ''),
-        count_ratio_threshold=(f'--count_ratio_threshold {config['umicount']['count_ratio_threshold']}' if config['umicount']['correct_umis'] else ''),
+        hamming_threshold=(f"--hamming_threshold {config['umicount']['hamming_threshold']}" if config['umicount']['correct_umis'] else ''),
+        count_ratio_threshold=(f"--count_ratio_threshold {config['umicount']['count_ratio_threshold']}" if config['umicount']['correct_umis'] else ''),
         extra=config['extra_args']['umicount']
     shell:
         '''
@@ -174,4 +186,10 @@ rule umicount:
             {params.dedupe_umis} {params.combine_unspliced} {params.count_multimappers} \
             {params.correct_umis} {params.hamming_threshold} {params.count_ratio_threshold} \
             {params.extra}
+
+        mv umite.D.tsv {runID}_umite.D.tsv
+        mv umite.RE.tsv {runID}_umite.RE.tsv
+        mv umite.RI.tsv {runID}_umite.RI.tsv
+        mv umite.UE.tsv {runID}_umite.UE.tsv
+        mv umite.UI.tsv {runID}_umite.UI.tsv
         '''

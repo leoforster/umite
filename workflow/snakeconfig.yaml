@@ -1,8 +1,8 @@
-########################
-###  umite WORKFLOW  ###
-########################
+###############################
+###  umite WORKFLOW CONFIG  ###
+###############################
 
-###### inputs: required ######
+###### inputs: required
 
 runID: "umite_basic" # give this workflow run a name
 
@@ -34,7 +34,7 @@ reference:
   genome: ""
   annotation: ""
 
-### program args: optional ###
+###### program args: optional
 
 # for details on individual program args: see methods  
 # supplement or github: https://github.com/leoforster/umite
@@ -42,7 +42,7 @@ umiextract:
   anchor_seq: "ATTGCGCAATG"
   trailing_seq: "GGG"
   umilen: 8
-  search_region: -1
+  search_region: 0
   min_seqlen: 30
   only_umi: False
   fuzzy_umi: True
