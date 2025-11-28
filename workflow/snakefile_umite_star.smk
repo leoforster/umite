@@ -46,7 +46,8 @@ print(f"running umite snakemake workflow {runID} on {len(samples)} samples, with
 # define outputs
 rule all:
     input:
-        expand(join(config['output_dir'], f"{runID}_umite{{ext}}"), ext=file_ext)
+        expand(join(config['output_dir'], f"{runID}_umite{{ext}}"), ext=file_ext),
+        join(config['log_dir'], 'star_genome_unload.complete') # ensure STAR index removed from shared memory
 
 rule prepare_star_indices:
     input:
