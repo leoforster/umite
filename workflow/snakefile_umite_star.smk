@@ -53,7 +53,8 @@ rule prepare_star_indices:
         ref_genome = ancient(config['reference']['genome']),
         gene_annotation = ancient(config['reference']['annotation'])
     output:
-        directory(join(dirname(config['reference']['genome']), 'star_genome_index'))
+        directory = directory(join(dirname(config['reference']['genome']), 'star_genome_index')),
+        genome_index_state = temp(touch(join(config['log_dir'], 'star_genome_index.completed')))
     log: join(config['log_dir'], f"{runID}.star_index.log")
     conda: 'umite_conda.yaml'
     threads: cores
@@ -117,7 +118,7 @@ rule umiextract:
 
 rule star_genome_load:
     input:
-        join(config['reference']['genome'], 'star_genome_index', 'genomeParameters.txt') # created with index
+        join(config['log_dir'], 'star_genome_index.completed')
     output:
         temp(touch(join(config['log_dir'], 'star_genome_load.completed')))
     shell:
@@ -155,10 +156,10 @@ rule star_alignment:
 
 rule star_genome_unload:
     input:
-        bams=expand(join(config['output_dir'], '{sample}_Aligned.out.bam'), sample=samples),
-        genome_load_state=join(config['log_dir'], 'star_genome_load.completed')
+        bams = expand(join(config['output_dir'], '{sample}_Aligned.out.bam'), sample=samples),
+        genome_load_state = join(config['log_dir'], 'star_genome_load.completed')
     output:
-        touch(join(config['log_dir'], f"{runID}_{{sample}}.star_genome_unload.complete"))
+        touch(join(config['log_dir'], 'star_genome_unload.complete'))
     params:
         genome_dir=directory(join(dirname(config['reference']['genome']), 'star_genome_index'))
     shell:
@@ -225,7 +226,7 @@ rule umicount:
 
 rule rename_umite_output:
     input:
-        expand(join(config['outdir'], f"umite{{ext}}"), ext=file_ext)
+        expand(join(config['output_dir'], f"umite{{ext}}"), ext=file_ext)
     output:
         expand(join(config['output_dir'], f"{runID}_umite{{ext}}"), ext=file_ext)
     params:
