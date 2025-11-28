@@ -53,7 +53,7 @@ rule prepare_star_indices:
         ref_genome = ancient(config['reference']['genome']),
         gene_annotation = ancient(config['reference']['annotation'])
     output:
-        directory(join(dirname(config['reference']['genome']), 'star_indices'))
+        directory(join(dirname(config['reference']['genome']), 'star_genome_index'))
     log: join(config['log_dir'], f"{runID}.star_index.log")
     conda: 'umite_conda.yaml'
     threads: cores
@@ -115,6 +115,18 @@ rule umiextract:
             {params.extra}
         '''
 
+rule star_genome_load:
+    input:
+        join(config['reference']['genome'], 'star_genome_index', 'genomeParameters.txt') # created with index
+    output:
+        temp(touch(join(config['log_dir'], 'star_genome_load.completed')))
+    shell:
+        '''
+        STAR \
+            --genomeLoad LoadAndExit \
+            --genomeDir {{os.dirname(input)}}
+        '''
+
 rule star_alignment:
     input:
         R1_extract = join(config['output_dir'], f"{{sample}}{format_umiextract_output_name(config['R1_suffix'])}"),
@@ -133,12 +145,27 @@ rule star_alignment:
         STAR \
             --runThreadN {threads} \
             --genomeDir {input.indices} \
-            --genomeLoad LoadAndRemove \
+            --genomeLoad LoadAndKeep \
             --readFilesIn {input.R1_extract} {input.R2_extract} \
             --readFilesCommand zcat \
             --outFileNamePrefix {params.outprefix} \
             --outSAMtype BAM Unsorted \
             {params.extra}
+        '''
+
+rule star_genome_unload:
+    input:
+        bams=expand(join(config['output_dir'], '{sample}_Aligned.out.bam'), sample=samples),
+        genome_load_state=join(config['log_dir'], 'star_genome_load.completed')
+    output:
+        touch(join(config['log_dir'], f"{runID}_{{sample}}.star_genome_unload.complete"))
+    params:
+        genome_dir=directory(join(dirname(config['reference']['genome']), 'star_genome_index'))
+    shell:
+        '''
+        STAR \
+            --genomeLoad Remove \
+            --genomeDir {params.genome_dir}
         '''
 
 rule sort_aligned_reads:
@@ -157,7 +184,7 @@ rule parse_dump_GTF:
         ancient(config['reference']['annotation'])
     output:
         join(dirname(config['reference']['annotation']), 'umicount_GTF_dump.pkl')
-    log: join(config['log_dir'], f"{runID.}gtf_dump.log")
+    log: join(config['log_dir'], f"{runID}.gtf_dump.log")
     conda: 'umite_conda.yaml'
     shell:
         'umicount -g {input} --GTF_dump {output}'
