@@ -209,8 +209,8 @@ rule umicount:
         hamming_threshold=(f"--hamming_threshold {config['umicount']['hamming_threshold']}" if config['umicount']['correct_umis'] else ''),
         count_ratio_threshold=(f"--count_ratio_threshold {config['umicount']['count_ratio_threshold']}" if config['umicount']['correct_umis'] else ''),
         extra=config['extra_args']['umicount']
-    run:
-        shell('''
+    shell:
+        '''
         umicount \
             --bams {input.bams} \
             -d {params.outdir} \
@@ -221,8 +221,16 @@ rule umicount:
             {params.dedupe_umis} {params.combine_unspliced} {params.count_multimappers} \
             {params.correct_umis} {params.hamming_threshold} {params.count_ratio_threshold} \
             {params.extra}
-        ''')
+        '''
 
+rule rename_umite_output:
+    input:
+        expand(join(config['outdir'], f"umite{{ext}}"), ext=file_ext)
+    output:
+        expand(join(config['output_dir'], f"{runID}_umite{{ext}}"), ext=file_ext)
+    params:
+        outdir=config['output_dir']
+    run:
         for ext in file_ext:
             os.rename(join(params.outdir, f"umite{ext}"),
                       join(params.outdir, f"{runID}_umite{ext}"))
