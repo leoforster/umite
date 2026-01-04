@@ -10,7 +10,7 @@ umite *unites* two tools that turn raw Smart‑seq3 FASTQ files into gene‑by�
 |------|------------------|---------|
 | ①    | **umiextract** | Detect and label UMI-containing reads in a FASTQ file. Use optional fuzzy UMI matching to incrase the number of detected UMIs. |
 | ②    | *(external)*     | Align reads using e.g. the splice-aware aligner, **STAR**. Then sort reads by read-name using **samtools** |
-| ③    | **umicount**   | Parse aligned reads and assign reads/UMIs to genes & exons, while deduplicate and (optionally) error‑correcting UMIs.  |
+| ③    | **umicount**   | Parse aligned reads and assign reads/UMIs to genes & exons, while deduplicating and (optionally) error‑correcting UMIs.  |
 
 Additional information is available in [our paper](https://XXX)
 
@@ -31,9 +31,13 @@ if this has issuses you can try using `python -m pip install -e .` to install vi
 umite requires **Python≥3.7** and the packages *HTSeq*, *regex* and *RapidFuzz*, which are automatically installed in the example above.
 For the alignment step, you will need **samtools** and ideally the **STAR** aligner.
 
-### Pipeline
+### Snakemake workflow
 
-The repository ships with [`minimal_umite_run.sh`](minimal_umite_run.sh) , a minimal script for running the umite pipeline.
+The repository ships with a Snakemake workflow for running umite: available under `workflow/`, see [the README](workflow/README.md) for additional details.
+
+### umite example run
+
+the following sections provide an overview of the umite command-line tools by outlining a minimal umite run as performed in the Snakemake workflow.
 
 #### ① Detect UMI-containing reads with umiextract
 
@@ -56,7 +60,7 @@ Here using `STAR` , note that `--genomeDir` requires a pre-existing genome index
 
 ```bash
 STAR \
-  --genomeDir /path/to/STAR/index \	
+  --genomeDir /path/to/STAR/index \
   --readFilesIn cellA_R1_umiextract.fastq.gz \
                  cellA_R2_umiextract.fastq.gz \
   --readFilesCommand zcat \
