@@ -20,6 +20,14 @@ Additional information is available in [our paper](https://XXX)
 
 ### Installation
 
+umite is installable using pip:
+
+```bash
+pip install umite
+```
+
+or via local installation from the github source:
+
 ```bash
 git clone https://github.com/leoforster/umite.git
 cd umite
